@@ -17,7 +17,7 @@ The domain must already be active in Cloudflare DNS.
    ```
 
 7. Save the route. Cloudflare creates the proxied DNS route for
-   `anonshock.namelessnanashi.dev`.
+   `anonshock.example.invalid`.
 
 The tunnel token grants permission to connect an origin to this tunnel. Keep it secret and rotate
 it from the tunnel settings if it is exposed. The host must be able to make outbound connections to
@@ -32,7 +32,7 @@ docker compose up -d
 ```
 
 The main Compose file pulls `ghcr.io/nanashithenameless/anonshock:latest`. Wait for the app to become
-healthy and `cloudflared` to be running, then open `https://anonshock.namelessnanashi.dev`.
+healthy and `cloudflared` to be running, then open `https://anonshock.example.invalid`.
 
 ## Local image
 
@@ -44,7 +44,7 @@ docker compose -f docker-compose.local.yml up -d --build
 
 ## Required setup
 
-- Set `PUBLIC_ORIGIN=https://anonshock.namelessnanashi.dev`.
+- Set `PUBLIC_ORIGIN=https://anonshock.example.invalid`.
 - Set `APP_VERSION` to the deployed AnonShock version. The outbound OpenShock User-Agent uses this
   version and automatically uses `PUBLIC_ORIGIN` as its URL.
 - For an unmodified deployment, leave `IS_FORK=false`. A fork must set `IS_FORK=true` and set
