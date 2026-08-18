@@ -1,0 +1,70 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: test
+      PUBLIC_ORIGIN: https://test.example.com
+      LOG_LEVEL: off
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - run: npm install --global corepack@latest && corepack enable
+      - run: yarn install --immutable
+      - run: yarn typecheck
+      - run: yarn test
+      - name: Anonymity gate
+        run: yarn test:anonymity
+      - name: Assert no image assets are shipped
+        run: |
+          if find public -type f \( -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' \
+               -o -name '*.gif' -o -name '*.webp' -o -name '*.svg' -o -name '*.ico' \) \
+               -print -quit | grep -q .; then
+            echo "image asset found; the no-icons rule forbids shipping images" >&2
+            exit 1
+          fi
+      - name: Assert no em dashes, en dashes, or curly quotes
+        run: |
+          if grep -rlP '[\x{2012}-\x{2015}\x{2018}\x{2019}\x{201c}\x{201d}]' \
+               --include='*.ts' --include='*.js' --include='*.md' --include='*.css' \
+               --include='*.yml' --include='*.sql' . \
+               | grep -v '^./reference/' | grep -v '^./node_modules/'; then
+            echo "found an em dash, en dash, or curly quote" >&2
+            exit 1
+          fi
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: runtime
+          push: false
+          load: true
+          tags: anonshock:ci
+      - name: Smoke test the built image
+        run: |
+          docker run --rm -d --name anonshock-ci \
+            -e PUBLIC_ORIGIN=http://localhost:8080 \
+            -e DB_PATH=/tmp/ci.db \
+            -e STORE_KEY="$(openssl rand -base64 32)" \
+            -e TOKEN_PEPPER="$(openssl rand -base64 32)" \
+            -p 8080:8080 anonshock:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/healthz; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8080/healthz
+          docker exec -e DB_PATH=/tmp/ci.db anonshock-ci anonshock status
+          docker rm -f anonshock-ci

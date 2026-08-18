@@ -1,0 +1,35 @@
+{
+  "name": "anonshock",
+  "version": "0.0.1",
+  "private": true,
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "yarn@4.18.0",
+  "bin": "./dist/cli/anonshock.js",
+  "scripts": {
+    "build": "node --experimental-strip-types scripts/vendor-altcha.ts && tsc -p tsconfig.json && node --experimental-strip-types scripts/copy-schema.ts",
+    "vendor": "node --experimental-strip-types scripts/vendor-altcha.ts",
+    "start": "node dist/server.js",
+    "dev": "node --experimental-strip-types scripts/dev.ts",
+    "dev:real": "node --experimental-strip-types scripts/dev.ts --real",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "test:anonymity": "node --experimental-strip-types --test test/anonymity.test.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "altcha": "^3.2.1",
+    "altcha-lib": "^2.3.2",
+    "hono": "^4.6.14",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.7.2"
+  }
+}

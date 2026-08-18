@@ -1,0 +1,15 @@
+node_modules/
+dist/
+data/
+.env
+.env.dev
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+*.db
+*.db-wal
+*.db-shm
+*.gitignore.*
+*.githide.*
+*.localonly.*
+*.devonly.*

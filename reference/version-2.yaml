@@ -1,0 +1,1559 @@
+openapi: 3.0.4
+info:
+  title: OpenShock.API
+  version: "2"
+servers:
+  - url: https://api.openshock.app
+  - url: https://api.openshock.dev
+paths:
+  /2/tokens/self:
+    get:
+      tags:
+        - API Tokens
+      summary: Gets information about the current token used to access this endpoint
+      operationId: TokensSelf_GetSelfTokenV2
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/TokenResponseV2"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponseV2"
+            text/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponseV2"
+      security:
+        - ApiToken:
+            - AuthenticationSchemes:ApiToken
+  /2/tokens/report:
+    post:
+      tags:
+        - API Tokens
+      summary: Endpoint to delete potentially compromised api tokens
+      operationId: Tokens_ReportTokens
+      requestBody:
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportTokensRequest"
+      responses:
+        "200":
+          description: The tokens were deleted if found
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie
+  /2/tokens:
+    get:
+      tags:
+        - API Tokens
+      summary: List all tokens for the current user
+      operationId: Tokens_ListTokensV2
+      responses:
+        "200":
+          description: All tokens for the current user
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TokenResponseV2"
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TokenResponseV2"
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TokenResponseV2"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie
+    post:
+      tags:
+        - API Tokens
+      summary: Create a new token
+      operationId: Tokens_CreateTokenV2
+      requestBody:
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTokenRequestV2"
+      responses:
+        "200":
+          description: The created token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenCreatedResponseV2"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie
+  /2/tokens/{tokenId}:
+    get:
+      tags:
+        - API Tokens
+      summary: Get a token by id
+      operationId: Tokens_GetTokenByIdV2
+      parameters:
+        - name: tokenId
+          in: path
+          description: ""
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponseV2"
+        "404":
+          description: The token does not exist or you do not have access to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie
+    patch:
+      tags:
+        - API Tokens
+      summary: Edit a token
+      operationId: Tokens_EditTokenV2
+      parameters:
+        - name: tokenId
+          in: path
+          description: ""
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditTokenRequestV2"
+      responses:
+        "200":
+          description: The edited token
+        "404":
+          description: The token does not exist or you do not have access to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie
+  /2/tokens/{tokenId}/paused:
+    patch:
+      tags:
+        - API Tokens
+      summary: Set whether a token is paused. A paused token may not send shocker
+        control messages.
+      operationId: Tokens_SetTokenPaused
+      parameters:
+        - name: tokenId
+          in: path
+          description: ""
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetTokenPausedRequest"
+      responses:
+        "200":
+          description: The now-set paused state of the token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPausedResponse"
+        "404":
+          description: The token does not exist or you do not have access to it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie
+  /2/account/username/check:
+    post:
+      tags:
+        - Account
+      summary: Check if a username is available
+      operationId: Account_CheckUsername
+      requestBody:
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeUsernameRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/UsernameCheckResponse"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsernameCheckResponse"
+            text/json:
+              schema:
+                $ref: "#/components/schemas/UsernameCheckResponse"
+  /2/account/login:
+    post:
+      tags:
+        - Account
+      summary: Authenticate a user
+      operationId: Account_LoginV2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginV2"
+      responses:
+        "200":
+          description: User successfully logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginV2OkResponse"
+        "401":
+          description: Invalid username or password
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+  /2/account/password-reset:
+    post:
+      tags:
+        - Account
+      summary: Initiate a password reset
+      operationId: Account_PasswordResetInitiateV2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetRequestV2"
+      responses:
+        "200":
+          description: Password reset email sent if the email is associated to an
+            registered account
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+  /2/account/signup:
+    post:
+      tags:
+        - Account
+      summary: Signs up a new user
+      operationId: Account_SignUpV2
+      requestBody:
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignUpV2"
+      responses:
+        "200":
+          description: User successfully signed up
+        "400":
+          description: Username or email already exists
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+        "409":
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+  /2/device/assignLCG:
+    get:
+      tags:
+        - Hub Endpoints
+      summary: Gets the best suited LCG node for the client
+      operationId: Device_GetLiveControlGatewayV2
+      parameters:
+        - name: version
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: Successfully assigned LCG node
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LcgNodeResponseV2"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+        "503":
+          description: Unable to find suitable LCG node
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+      security:
+        - HubToken:
+            - AuthenticationSchemes:HubToken
+  /2/devices:
+    post:
+      tags:
+        - Hub Management
+      summary: Create a new device for the current user
+      operationId: Devices_CreateDeviceV2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HubCreateRequest"
+      responses:
+        "201":
+          description: Successfully created device
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: uuid
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+        - ApiToken:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+  /2/devices/{deviceId}/lcg:
+    get:
+      tags:
+        - Hub Management
+      summary: >-
+        Gets the live control gateway a hub is connected to, including its
+        public port and the full
+
+        live-control WebSocket path (honoring the gateway's configured path
+        prefix).
+      operationId: Devices_GetLiveControlGatewayInfoV2
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successfully retrieved live control gateway info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LcgResponseV2"
+        "404":
+          description: Device does not exist or is not online
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+        - ApiToken:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+  /2/shockers/control:
+    post:
+      tags:
+        - Shockers
+      summary: Send a control message to shockers
+      operationId: Shocker_SendControl
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ControlRequest"
+      responses:
+        "200":
+          description: The control messages were successfully sent.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegacyEmptyResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+        "412":
+          description: Precondition Failed
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+        - ApiToken:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+  /2/shares/user/invites:
+    post:
+      tags:
+        - User Shocker Shares
+      operationId: UserShares_CreateShareInvite
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateShareRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: uuid
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+        - ApiToken:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+  /2/shares/user:
+    get:
+      tags:
+        - User Shocker Shares
+      operationId: UserShares_GetSharesByUsers
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/V2UserShares"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/V2UserShares"
+            text/json:
+              schema:
+                $ref: "#/components/schemas/V2UserShares"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+        - ApiToken:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+  /2/shares/user/invites/outgoing:
+    get:
+      tags:
+        - User Shocker Shares
+      operationId: UserShares_GetOutgoingInvitesList
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShareInviteBaseDetails"
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShareInviteBaseDetails"
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShareInviteBaseDetails"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+        - ApiToken:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+  /2/shares/user/invites/incoming:
+    get:
+      tags:
+        - User Shocker Shares
+      operationId: UserShares_GetIncomingInvitesList
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShareInviteBaseDetails"
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShareInviteBaseDetails"
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShareInviteBaseDetails"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+        - ApiToken:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+  /2/shares/user/invites/outgoing/{inviteId}:
+    delete:
+      tags:
+        - User Shocker Shares
+      operationId: UserShares_DeleteOutgoingInvite
+      parameters:
+        - name: inviteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+        - ApiToken:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+  /2/shares/user/invites/incoming/{inviteId}:
+    delete:
+      tags:
+        - User Shocker Shares
+      operationId: UserShares_DenyIncomingInvite
+      parameters:
+        - name: inviteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+        - ApiToken:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+    post:
+      tags:
+        - User Shocker Shares
+      summary: Accept a share request and share the shockers with the current user.
+      operationId: UserShares_RedeemInvite
+      parameters:
+        - name: inviteId
+          in: path
+          description: ""
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/V2UserSharesListItem"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/V2UserSharesListItem"
+            text/json:
+              schema:
+                $ref: "#/components/schemas/V2UserSharesListItem"
+        "404":
+          description: Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+        - ApiToken:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+  /2/shares/user/{userId}/shockers/pause:
+    post:
+      tags:
+        - User Shocker Shares
+      operationId: UserShares_BulkPauseUserShareShockers
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PauseUserShareShockersRequest"
+          text/json:
+            schema:
+              $ref: "#/components/schemas/PauseUserShareShockersRequest"
+          application/*+json:
+            schema:
+              $ref: "#/components/schemas/PauseUserShareShockersRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/PauseUserShareShockersResponse"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PauseUserShareShockersResponse"
+            text/json:
+              schema:
+                $ref: "#/components/schemas/PauseUserShareShockersResponse"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+        - ApiToken:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+  /2/shares/user/{userId}/shockers:
+    delete:
+      tags:
+        - User Shocker Shares
+      operationId: UserShares_BulkRemoveUserShareShockers
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              minItems: 1
+              type: array
+              items:
+                type: string
+                format: uuid
+          text/json:
+            schema:
+              minItems: 1
+              type: array
+              items:
+                type: string
+                format: uuid
+          application/*+json:
+            schema:
+              minItems: 1
+              type: array
+              items:
+                type: string
+                format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/RemoveUserSharesResponse"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemoveUserSharesResponse"
+            text/json:
+              schema:
+                $ref: "#/components/schemas/RemoveUserSharesResponse"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+        - ApiToken:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+    patch:
+      tags:
+        - User Shocker Shares
+      summary: Update user shares for a shocker
+      operationId: UserShares_BulkUserShareShockersUpdate
+      parameters:
+        - name: userId
+          in: path
+          description: ""
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkUserShareShockersUpdateRequest"
+      responses:
+        "200":
+          description: Successfully updated share code
+        "404":
+          description: The share code does not exist or you do not have access to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/OpenShockProblem"
+      security:
+        - UserSessionCookie:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+        - ApiToken:
+            - AuthenticationSchemes:UserSessionCookie,ApiToken
+components:
+  schemas:
+    BasicUserInfo:
+      required:
+        - id
+        - image
+        - name
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        image:
+          type: string
+          format: uri
+      additionalProperties: false
+    BulkUserShareShockersUpdateRequest:
+      required:
+        - limits
+        - permissions
+        - shockers
+      type: object
+      properties:
+        permissions:
+          $ref: "#/components/schemas/ShockerPermissions"
+        limits:
+          $ref: "#/components/schemas/ShockerLimits"
+        shockers:
+          type: array
+          items:
+            type: string
+            format: uuid
+      additionalProperties: false
+    ChangeUsernameRequest:
+      required:
+        - username
+      type: object
+      properties:
+        username:
+          type: string
+          example: String
+      additionalProperties: false
+    Control:
+      required:
+        - duration
+        - id
+        - intensity
+        - type
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          $ref: "#/components/schemas/ControlType"
+        intensity:
+          maximum: 100
+          minimum: 0
+          type: integer
+          format: int32
+        duration:
+          maximum: 65535
+          minimum: 300
+          type: integer
+          format: int32
+        exclusive:
+          type: boolean
+      additionalProperties: false
+    ControlLimitMode:
+      enum:
+        - Clamp
+        - Lerp
+      type: string
+    ControlRequest:
+      required:
+        - shocks
+      type: object
+      properties:
+        shocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Control"
+        customName:
+          type: string
+          nullable: true
+      additionalProperties: false
+    ControlType:
+      enum:
+        - Stop
+        - Shock
+        - Vibrate
+        - Sound
+      type: string
+    CreateShareRequest:
+      required:
+        - shockers
+      type: object
+      properties:
+        shockers:
+          maxItems: 128
+          type: array
+          items:
+            $ref: "#/components/schemas/ShockerPermLimitPairWithId"
+        user:
+          type: string
+          format: uuid
+          nullable: true
+      additionalProperties: false
+    CreateTokenRequestV2:
+      required:
+        - name
+        - permissions
+        - shockerControl
+      type: object
+      properties:
+        name:
+          maxLength: 64
+          minLength: 1
+          type: string
+        permissions:
+          maxItems: 256
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionType"
+        shockerControl:
+          $ref: "#/components/schemas/ShockerControlSettings"
+        validUntil:
+          type: string
+          format: date-time
+          nullable: true
+      additionalProperties: false
+    DurationLimitSettings:
+      required:
+        - max
+        - min
+      type: object
+      properties:
+        min:
+          maximum: 65535
+          minimum: 300
+          type: integer
+          format: int32
+        max:
+          maximum: 65535
+          minimum: 300
+          type: integer
+          format: int32
+        mode:
+          $ref: "#/components/schemas/ControlLimitMode"
+      additionalProperties: false
+    EditTokenRequestV2:
+      required:
+        - name
+        - permissions
+        - shockerControl
+      type: object
+      properties:
+        name:
+          maxLength: 64
+          minLength: 1
+          type: string
+        permissions:
+          maxItems: 256
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionType"
+        shockerControl:
+          $ref: "#/components/schemas/ShockerControlSettings"
+      additionalProperties: false
+    HubCreateRequest:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          maxLength: 64
+          minLength: 1
+          type: string
+      additionalProperties: false
+    IntensityLimitSettings:
+      required:
+        - max
+        - min
+        - mode
+      type: object
+      properties:
+        min:
+          maximum: 100
+          minimum: 0
+          type: integer
+          format: int32
+        max:
+          maximum: 100
+          minimum: 0
+          type: integer
+          format: int32
+        mode:
+          $ref: "#/components/schemas/ControlLimitMode"
+      additionalProperties: false
+    LcgNodeResponseV2:
+      required:
+        - country
+        - host
+        - path
+        - port
+      type: object
+      properties:
+        host:
+          type: string
+        port:
+          type: integer
+          format: int32
+        path:
+          type: string
+        country:
+          type: string
+      additionalProperties: false
+    LcgResponseV2:
+      required:
+        - country
+        - host
+        - pathPrefix
+        - port
+      type: object
+      properties:
+        host:
+          type: string
+        port:
+          type: integer
+          format: int32
+        pathPrefix:
+          type: string
+        country:
+          type: string
+      additionalProperties: false
+    LegacyEmptyResponse:
+      required:
+        - message
+      type: object
+      properties:
+        message:
+          type: string
+        data:
+          nullable: true
+      additionalProperties: false
+    LoginV2:
+      required:
+        - password
+        - turnstileResponse
+        - usernameOrEmail
+      type: object
+      properties:
+        password:
+          minLength: 1
+          type: string
+        usernameOrEmail:
+          minLength: 1
+          type: string
+        turnstileResponse:
+          maxLength: 2048
+          minLength: 0
+          type: string
+      additionalProperties: false
+    LoginV2OkResponse:
+      required:
+        - accountEmail
+        - accountId
+        - accountName
+        - accountRoles
+        - isVerified
+        - profileImage
+      type: object
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        accountName:
+          type: string
+        accountEmail:
+          type: string
+        isVerified:
+          type: boolean
+        profileImage:
+          type: string
+          format: uri
+        accountRoles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleType"
+      additionalProperties: false
+    OpenShockProblem:
+      type: object
+      properties:
+        type:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        status:
+          type: integer
+          format: int32
+          nullable: true
+        detail:
+          type: string
+          nullable: true
+        instance:
+          type: string
+          nullable: true
+        message:
+          type: string
+          readOnly: true
+          deprecated: true
+        traceId:
+          type: string
+          nullable: true
+          readOnly: true
+          deprecated: true
+        requestId:
+          type: string
+          nullable: true
+          readOnly: true
+      additionalProperties: {}
+    PasswordResetRequestV2:
+      required:
+        - email
+        - turnstileResponse
+      type: object
+      properties:
+        email:
+          type: string
+          example: user@example.com
+        turnstileResponse:
+          maxLength: 2048
+          minLength: 0
+          type: string
+      additionalProperties: false
+    PauseUserShareShockersRequest:
+      required:
+        - pause
+        - shockers
+      type: object
+      properties:
+        shockers:
+          minItems: 1
+          type: array
+          items:
+            type: string
+            format: uuid
+        pause:
+          type: boolean
+      additionalProperties: false
+    PauseUserShareShockersResponse:
+      required:
+        - affectedRecords
+        - pauseStates
+      type: object
+      properties:
+        affectedRecords:
+          type: integer
+          format: int32
+        pauseStates:
+          type: object
+          additionalProperties:
+            title: PauseReason
+            type: integer
+            description: >-
+              An integer representing the reason(s) for the shocker being
+              paused, expressed as a bitfield where reasons are OR'd together.
+
+
+              Each bit corresponds to:
+
+              - 1: Shocker
+
+              - 2: UserShare
+
+              - 4: PublicShare
+
+
+              For example, a value of 6 (2 | 4) indicates both 'UserShare' and
+              'PublicShare' reasons.
+            example: 6
+      additionalProperties: false
+    PermissionType:
+      enum:
+        - shockers.use
+        - shockers.edit
+        - shockers.pause
+        - devices.edit
+        - devices.auth
+        - usershares.edit
+        - usershares.pause
+        - publicshares.pause
+        - publicshares.edit
+      type: string
+    RemoveUserSharesResponse:
+      required:
+        - affectedRecords
+      type: object
+      properties:
+        affectedRecords:
+          type: integer
+          format: int32
+      additionalProperties: false
+    ReportTokensRequest:
+      required:
+        - secrets
+        - turnstileResponse
+      type: object
+      properties:
+        turnstileResponse:
+          maxLength: 2048
+          minLength: 0
+          type: string
+        secrets:
+          maxItems: 512
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+    RoleType:
+      enum:
+        - Support
+        - Staff
+        - Admin
+        - System
+      type: string
+    SetTokenPausedRequest:
+      required:
+        - paused
+      type: object
+      properties:
+        paused:
+          type: boolean
+          description: When true, the token is paused and may not send shocker control
+            messages.
+      additionalProperties: false
+    ShareInviteBaseDetails:
+      required:
+        - createdAt
+        - id
+        - owner
+        - sharedWith
+        - shockers
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        owner:
+          $ref: "#/components/schemas/BasicUserInfo"
+        sharedWith:
+          $ref: "#/components/schemas/BasicUserInfo"
+        shockers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShockerPermLimitPairWithIdAndName"
+      additionalProperties: false
+    ShockerControlSettings:
+      required:
+        - duration
+        - intensity
+        - paused
+      type: object
+      properties:
+        paused:
+          type: boolean
+          description: When true, this token is paused and may not send shocker control
+            messages.
+        intensity:
+          $ref: "#/components/schemas/IntensityLimitSettings"
+        duration:
+          $ref: "#/components/schemas/DurationLimitSettings"
+      additionalProperties: false
+      description: "Per-token shocker control configuration: a toggle plus min/max
+        limits for intensity and duration."
+    ShockerLimits:
+      required:
+        - duration
+        - intensity
+      type: object
+      properties:
+        intensity:
+          maximum: 100
+          minimum: 0
+          type: integer
+          format: int32
+          nullable: true
+        duration:
+          maximum: 65535
+          minimum: 300
+          type: integer
+          format: int32
+          nullable: true
+      additionalProperties: false
+    ShockerPermLimitPairWithId:
+      required:
+        - limits
+        - permissions
+      type: object
+      properties:
+        permissions:
+          $ref: "#/components/schemas/ShockerPermissions"
+        limits:
+          $ref: "#/components/schemas/ShockerLimits"
+        id:
+          type: string
+          format: uuid
+      additionalProperties: false
+    ShockerPermLimitPairWithIdAndName:
+      required:
+        - limits
+        - name
+        - permissions
+      type: object
+      properties:
+        permissions:
+          $ref: "#/components/schemas/ShockerPermissions"
+        limits:
+          $ref: "#/components/schemas/ShockerLimits"
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      additionalProperties: false
+    ShockerPermissions:
+      required:
+        - shock
+        - sound
+        - vibrate
+      type: object
+      properties:
+        vibrate:
+          type: boolean
+        sound:
+          type: boolean
+        shock:
+          type: boolean
+        live:
+          type: boolean
+      additionalProperties: false
+    SignUpV2:
+      required:
+        - email
+        - password
+        - turnstileResponse
+        - username
+      type: object
+      properties:
+        username:
+          type: string
+          example: String
+        password:
+          type: string
+          example: user@example.com
+        email:
+          type: string
+          example: user@example.com
+        turnstileResponse:
+          maxLength: 2048
+          minLength: 0
+          type: string
+      additionalProperties: false
+    TokenCreatedResponseV2:
+      required:
+        - createdAt
+        - id
+        - lastUsed
+        - name
+        - permissions
+        - shockerControl
+        - token
+        - validUntil
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        token:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        validUntil:
+          type: string
+          format: date-time
+          nullable: true
+        lastUsed:
+          type: string
+          format: date-time
+          nullable: true
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionType"
+        shockerControl:
+          $ref: "#/components/schemas/ShockerControlSettings"
+      additionalProperties: false
+    TokenPausedResponse:
+      required:
+        - paused
+      type: object
+      properties:
+        paused:
+          type: boolean
+          description: The now-set paused state of the token.
+      additionalProperties: false
+    TokenResponseV2:
+      required:
+        - createdOn
+        - id
+        - lastUsed
+        - name
+        - permissions
+        - shockerControl
+        - validUntil
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        createdOn:
+          type: string
+          format: date-time
+        validUntil:
+          type: string
+          format: date-time
+          nullable: true
+        lastUsed:
+          type: string
+          format: date-time
+          nullable: true
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionType"
+        shockerControl:
+          $ref: "#/components/schemas/ShockerControlSettings"
+      additionalProperties: false
+    UserShareInfo:
+      required:
+        - createdOn
+        - id
+        - limits
+        - name
+        - paused
+        - permissions
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        createdOn:
+          type: string
+          format: date-time
+        permissions:
+          $ref: "#/components/schemas/ShockerPermissions"
+        limits:
+          $ref: "#/components/schemas/ShockerLimits"
+        paused:
+          title: PauseReason
+          type: integer
+          description: >-
+            An integer representing the reason(s) for the shocker being paused,
+            expressed as a bitfield where reasons are OR'd together.
+
+
+            Each bit corresponds to:
+
+            - 1: Shocker
+
+            - 2: UserShare
+
+            - 4: PublicShare
+
+
+            For example, a value of 6 (2 | 4) indicates both 'UserShare' and
+            'PublicShare' reasons.
+          example: 6
+      additionalProperties: false
+    UsernameAvailability:
+      enum:
+        - Available
+        - Taken
+        - Invalid
+      type: string
+    UsernameCheckResponse:
+      required:
+        - availability
+      type: object
+      properties:
+        availability:
+          $ref: "#/components/schemas/UsernameAvailability"
+        error:
+          $ref: "#/components/schemas/UsernameError"
+      additionalProperties: false
+    UsernameError:
+      required:
+        - message
+        - type
+      type: object
+      properties:
+        message:
+          type: string
+        type:
+          $ref: "#/components/schemas/UsernameErrorType"
+      additionalProperties: false
+    UsernameErrorType:
+      enum:
+        - TooShort
+        - TooLong
+        - StartOrEndWithWhitespace
+        - ResembleEmail
+        - ObnoxiousCharacters
+        - Blacklisted
+      type: string
+    V2UserShares:
+      required:
+        - incoming
+        - outgoing
+      type: object
+      properties:
+        outgoing:
+          type: array
+          items:
+            $ref: "#/components/schemas/V2UserSharesListItem"
+        incoming:
+          type: array
+          items:
+            $ref: "#/components/schemas/V2UserSharesListItem"
+      additionalProperties: false
+    V2UserSharesListItem:
+      required:
+        - id
+        - image
+        - name
+        - shares
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        image:
+          type: string
+          format: uri
+        shares:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserShareInfo"
+      additionalProperties: false
+  securitySchemes:
+    UserSessionCookie:
+      type: apiKey
+      description: Enter user session cookie
+      name: openShockSession
+      in: cookie
+    ApiToken:
+      type: apiKey
+      description: Enter API Token
+      name: OpenShockToken
+      in: header
+    HubToken:
+      type: apiKey
+      description: Enter hub token
+      name: DeviceToken
+      in: header
+tags:
+  - name: Shockers
+    description: Shocker management
+  - name: User Shocker Shares
+    description: Shocker share management
+  - name: Hub Management
+    description: Device management
+  - name: Hub Endpoints
+    description: For devices (ESP's)
+  - name: Account
+    description: User account management
