@@ -55,16 +55,26 @@ jobs:
           tags: anonshock:ci
       - name: Smoke test the built image
         run: |
-          docker run --rm -d --name anonshock-ci \
-            -e PUBLIC_ORIGIN=http://localhost:8080 \
+          trap 'docker rm -f anonshock-ci >/dev/null 2>&1 || true' EXIT
+          docker run -d --name anonshock-ci \
+            -e PUBLIC_ORIGIN=https://test.example.com \
+            -e SOCKET_PATH=/tmp/anonshock.sock \
             -e DB_PATH=/tmp/ci.db \
             -e STORE_KEY="$(openssl rand -base64 32)" \
             -e TOKEN_PEPPER="$(openssl rand -base64 32)" \
-            -p 8080:8080 anonshock:ci
+            anonshock:ci
+          ready=false
           for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8080/healthz; then break; fi
+            if docker exec anonshock-ci node -e \
+              "require('node:http').get({socketPath:'/tmp/anonshock.sock',path:'/healthz'},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"; then
+              ready=true
+              break
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' anonshock-ci)" != true ]; then break; fi
             sleep 1
           done
-          curl -fsS http://127.0.0.1:8080/healthz
+          if [ "$ready" != true ]; then
+            docker logs anonshock-ci
+            exit 1
+          fi
           docker exec -e DB_PATH=/tmp/ci.db anonshock-ci anonshock status
-          docker rm -f anonshock-ci

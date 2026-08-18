@@ -7,6 +7,7 @@ const config = readFileSync(new URL("../src/config.ts", import.meta.url), "utf8"
 const server = readFileSync(new URL("../src/server.ts", import.meta.url), "utf8");
 const http = readFileSync(new URL("../src/routes/http.ts", import.meta.url), "utf8");
 const deployment = readFileSync(new URL("../docs/deployment.md", import.meta.url), "utf8");
+const ci = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
 
 describe("production transport", () => {
   it("has no app TCP ingress and connects cloudflared over a Unix socket", () => {
@@ -14,6 +15,13 @@ describe("production transport", () => {
     assert.match(compose, /SOCKET_PATH: \/run\/anonshock\/anonshock\.sock/);
     assert.match(compose, /anonshock-run:\/run\/anonshock/g);
     assert.match(server, /server\.listen\(config\.socketPath/);
+  });
+
+  it("smoke tests the production image through a Unix socket", () => {
+    assert.match(ci, /PUBLIC_ORIGIN=https:\/\/test\.example\.com/);
+    assert.match(ci, /SOCKET_PATH=\/tmp\/anonshock\.sock/);
+    assert.match(ci, /socketPath:'\/tmp\/anonshock\.sock'/);
+    assert.doesNotMatch(ci, /-p 8080:8080/);
   });
 
   it("refuses insecure production origins", () => {
