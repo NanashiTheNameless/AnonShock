@@ -1,14 +1,19 @@
 # syntax=docker/dockerfile:1
 
-FROM node:26-alpine AS deps
+FROM node:26-alpine AS package-tools
 WORKDIR /app
-RUN npm install --global corepack@latest && corepack enable
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false \
+    NPM_CONFIG_LOGLEVEL=error \
+    COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN npm install --global --silent corepack@latest && corepack enable
+
+FROM package-tools AS deps
 COPY package.json yarn.lock .yarnrc.yml ./
 RUN yarn install --immutable
 
-FROM node:26-alpine AS build
-WORKDIR /app
-RUN npm install --global corepack@latest && corepack enable
+FROM package-tools AS build
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json yarn.lock .yarnrc.yml tsconfig.json ./
 COPY src ./src

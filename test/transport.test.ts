@@ -8,6 +8,7 @@ const server = readFileSync(new URL("../src/server.ts", import.meta.url), "utf8"
 const http = readFileSync(new URL("../src/routes/http.ts", import.meta.url), "utf8");
 const deployment = readFileSync(new URL("../docs/deployment.md", import.meta.url), "utf8");
 const ci = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+const dockerfile = readFileSync(new URL("../Dockerfile", import.meta.url), "utf8");
 
 describe("production transport", () => {
   it("has no app TCP ingress and connects cloudflared over a Unix socket", () => {
@@ -22,6 +23,17 @@ describe("production transport", () => {
     assert.match(ci, /SOCKET_PATH=\/tmp\/anonshock\.sock/);
     assert.match(ci, /socketPath:'\/tmp\/anonshock\.sock'/);
     assert.doesNotMatch(ci, /-p 8080:8080/);
+  });
+
+  it("keeps package-manager notices out of CI and image builds", () => {
+    for (const source of [ci, dockerfile]) {
+      assert.match(source, /NPM_CONFIG_UPDATE_NOTIFIER(?::|=)\s*"?false/);
+      assert.match(source, /NPM_CONFIG_FUND(?::|=)\s*"?false/);
+      assert.match(source, /NPM_CONFIG_AUDIT(?::|=)\s*"?false/);
+      assert.match(source, /NPM_CONFIG_LOGLEVEL(?::|=)\s*error/);
+      assert.match(source, /COREPACK_ENABLE_DOWNLOAD_PROMPT(?::|=)\s*"?0/);
+      assert.match(source, /npm install --global --silent corepack@latest/);
+    }
   });
 
   it("refuses insecure production origins", () => {
