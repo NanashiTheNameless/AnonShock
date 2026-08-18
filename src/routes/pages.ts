@@ -106,8 +106,9 @@ values are encrypted with a key that is not kept in the database.</p>
 <h2>What is never stored</h2>
 <p>There is no control history, no audit log, no request log, and no access log. Guest sessions,
 rate-limit counters, and the live feed exist only in memory and are gone when the process restarts.
-IP addresses are hashed with a key generated at startup and rotated hourly, used for rate limiting,
-and never written down.</p>
+IP addresses are hashed with keys generated at startup, used for rate limiting, and never written
+down. The key behind most limits rotates hourly; a second key, used only by the limits that count
+across a day, rotates daily. Both live in memory and are gone at restart.</p>
 <h2>Accounts</h2>
 <p>There are none. A creator's browser holds an access token; this instance keeps only its hash and
 knows nothing else about who they are. There is no email, no password, and no reset.</p>

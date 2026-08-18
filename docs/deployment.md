@@ -55,6 +55,11 @@ docker compose -f docker-compose.local.yml up -d --build
 - Generate `STORE_KEY`, `TOKEN_PEPPER`, and optionally `ALTCHA_HMAC_KEY` with
   `openssl rand -base64 32`.
 - Set `TUNNEL_TOKEN` to a Cloudflare Tunnel token.
+- Leave `TRUST_PROXY=cloudflare` when the tunnel is the only way in: the client address is read from
+  `CF-Connecting-IP`, which is trustworthy exactly because production listens on a Unix socket with
+  no port to reach around it. Set `TRUST_PROXY=none` behind any other proxy. `none` believes no
+  header at all, which means every caller shares one rate-limit bucket over a Unix socket. No other
+  value is accepted; the process refuses to start.
 - Keep `.env` readable only by the operator and back up `STORE_KEY`; losing it makes stored links
   unreadable.
 - Keep the data volume backed up if existing links must survive a host failure.

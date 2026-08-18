@@ -77,8 +77,14 @@ holder.get("/api/holder/links", (c) => {
 /**
  * Issues a fresh manage token for one of this holder's links. This is the only
  * way to recover a manage URL that was not saved at creation.
+ *
+ * POST, not GET, because issuing one invalidates the previous manage token.
+ * SameSite=Lax still sends the holder cookie on a cross-site top-level
+ * navigation, so as a GET this was reachable from any page the holder clicked:
+ * the response stayed unreadable, but the manage URL they had saved stopped
+ * working. A POST is not sent cross-site with a Lax cookie at all.
  */
-holder.get("/api/holder/links/:id/manage-url", (c) => {
+holder.post("/api/holder/links/:id/manage-url", (c) => {
   const id = holderId(c);
   if (!id) return problem(c, 401, "no_holder");
   if (!manageUrlLimiter.check(id)) return problem(c, 429, "rate_limited", { retryAfter: 3600 });

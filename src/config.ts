@@ -113,6 +113,10 @@ if (process.env.NODE_ENV === "production") {
   }
 }
 
+if (!["cloudflare", "none"].includes(config.trustProxy)) {
+  throw new Error('TRUST_PROXY must be "cloudflare" (believe CF-Connecting-IP) or "none" (believe no header)');
+}
+
 export function botCheckAvailable(): boolean {
   return config.altchaHmacKey !== "";
 }

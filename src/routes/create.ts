@@ -22,7 +22,7 @@ import { WindowCounter } from "../core/limits.ts";
 import { roomForLink } from "../core/rooms.ts";
 import { verifyAltcha } from "../core/altcha.ts";
 import { UpstreamError } from "../upstream/rest.ts";
-import { clientIpHash, cookie, guestJson, problem, readCookie } from "./http.ts";
+import { clientIpDayHash, clientIpHash, cookie, guestJson, problem, readCookie } from "./http.ts";
 
 export const HOLDER_COOKIE = "__Host-as_holder";
 
@@ -62,10 +62,10 @@ create.post("/api/links/inspect", async (c) => {
   }
 
   const mode = body["mode"] === "token" ? "token" : "share";
-  const base =
-    typeof body["upstreamBase"] === "string" && body["upstreamBase"].startsWith("https://")
-      ? body["upstreamBase"]
-      : config.upstreamBase;
+  // The upstream is instance configuration, never request input: a caller-supplied
+  // base would turn every inspect/create into a server-side request to an arbitrary
+  // host, and would carry a token-mode OpenShockToken header there.
+  const base = config.upstreamBase;
 
   if (botCheckAvailable()) {
     const solution = typeof body["altcha"] === "string" ? body["altcha"] : "";
@@ -125,7 +125,8 @@ function inspectError(c: Context, err: unknown, mode: "share" | "token" = "share
 
 create.post("/api/links", async (c) => {
   if (isPaused()) return problem(c, 503, "instance_paused");
-  if (!createLimiter.check(clientIpHash(c))) {
+  // Day-long window, so it needs the key that outlives the hourly rotation.
+  if (!createLimiter.check(clientIpDayHash(c))) {
     return problem(c, 429, "too_many_links", { retryAfter: 3600 });
   }
 
@@ -144,10 +145,10 @@ create.post("/api/links", async (c) => {
   const mode = body["mode"] === "token" ? "token" : "share";
   if (mode === "token" && !config.allowTokenMode) return problem(c, 403, "token_mode_disabled");
 
-  const base =
-    typeof body["upstreamBase"] === "string" && body["upstreamBase"].startsWith("https://")
-      ? body["upstreamBase"]
-      : config.upstreamBase;
+  // The upstream is instance configuration, never request input: a caller-supplied
+  // base would turn every inspect/create into a server-side request to an arbitrary
+  // host, and would carry a token-mode OpenShockToken header there.
+  const base = config.upstreamBase;
 
   if (botCheckAvailable()) {
     const solution = typeof body["altcha"] === "string" ? body["altcha"] : "";
@@ -192,7 +193,7 @@ create.post("/api/links", async (c) => {
 
     let created;
     try {
-      created = createLink(input);
+      created = await createLink(input);
     } catch (err) {
       // A holder minted for a creation that failed owns nothing; drop it rather
       // than leaving a row for the sweeper to find later.

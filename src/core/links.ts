@@ -1,4 +1,5 @@
-import { scryptSync, randomBytes, timingSafeEqual } from "node:crypto";
+import { scrypt, randomBytes, timingSafeEqual } from "node:crypto";
+import { promisify } from "node:util";
 import { config, HARD } from "../config.ts";
 import * as q from "../store/queries.ts";
 import { newToken, tokenHash } from "../store/crypto.ts";
@@ -27,17 +28,33 @@ export class CreateError extends Error {
 
 /* ------------------------------------------------------------- passwords */
 
-export function hashGuestPassword(password: string): Buffer {
+/**
+ * scrypt is deliberately expensive, so it must never run on the event loop:
+ * the sync form froze every other request in the process for the duration of
+ * one guest's password attempt. The async form hands the work to the thread
+ * pool instead.
+ */
+const scryptAsync = promisify(scrypt) as (
+  password: string,
+  salt: Buffer,
+  keylen: number,
+) => Promise<Buffer>;
+
+/** Long enough for any real passphrase, short enough that scrypt cost is bounded. */
+export const MAX_GUEST_PASSWORD = 128;
+
+export async function hashGuestPassword(password: string): Promise<Buffer> {
   const salt = randomBytes(16);
-  const key = scryptSync(password, salt, 32);
+  const key = await scryptAsync(password, salt, 32);
   return Buffer.concat([salt, key]);
 }
 
-export function verifyGuestPassword(stored: Buffer, password: string): boolean {
+export async function verifyGuestPassword(stored: Buffer, password: string): Promise<boolean> {
   if (stored.length !== 48) return false;
+  if (password.length > MAX_GUEST_PASSWORD) return false;
   const salt = stored.subarray(0, 16);
   const expected = stored.subarray(16);
-  const actual = scryptSync(password, salt, 32);
+  const actual = await scryptAsync(password, salt, 32);
   return timingSafeEqual(expected, actual);
 }
 
@@ -164,6 +181,10 @@ export function validateSettings(settings: CreateSettings, discovered: Inspected
   req(settings.ttlSeconds <= config.maxLinkTtlSeconds, "ttlSeconds");
   req(typeof settings.requireBotCheck === "boolean", "requireBotCheck");
   req(settings.guestPassword === null || typeof settings.guestPassword === "string", "guestPassword");
+  req(
+    settings.guestPassword === null || settings.guestPassword.length <= MAX_GUEST_PASSWORD,
+    "guestPassword",
+  );
   req(Number.isInteger(settings.rateLimitPerMin) && settings.rateLimitPerMin >= 0, "rateLimitPerMin");
   req(settings.rateLimitPerMin <= 120, "rateLimitPerMin");
   req(
@@ -277,7 +298,7 @@ export interface CreatedLink {
   manageToken: string;
 }
 
-export function createLink(input: CreateInput): CreatedLink {
+export async function createLink(input: CreateInput): Promise<CreatedLink> {
   if (q.countLinks() >= config.maxLinks) {
     throw new CreateError("instance_full", 503, "this instance is full");
   }
@@ -351,7 +372,7 @@ export function createLink(input: CreateInput): CreatedLink {
   if (input.upstreamShareId) insert.upstreamShareId = input.upstreamShareId;
   if (input.upstreamToken) insert.upstreamToken = input.upstreamToken;
   if (input.settings.guestPassword) {
-    insert.guestPasswordHash = hashGuestPassword(input.settings.guestPassword);
+    insert.guestPasswordHash = await hashGuestPassword(input.settings.guestPassword);
   }
 
   q.insertLink(insert);

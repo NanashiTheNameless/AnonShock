@@ -1,7 +1,7 @@
 import { config } from "../config.ts";
 import * as q from "../store/queries.ts";
 import { LinkRoom } from "./room.ts";
-import { rotateIpKey } from "./limits.ts";
+import { pruneAllCounters, rotateIpKey } from "./limits.ts";
 import type { LinkDef } from "../types.ts";
 
 const rooms = new Map<string, LinkRoom>();
@@ -75,6 +75,8 @@ export function sweep(now = Date.now()): void {
     q.deleteLink(id);
   }
   q.pruneEmptyHolders();
+  // Limiter keys outlive their window otherwise: the map only ever grew.
+  pruneAllCounters(now);
   for (const room of rooms.values()) {
     room.pruneSessions(now);
     room.closeIdleUpstream(now);

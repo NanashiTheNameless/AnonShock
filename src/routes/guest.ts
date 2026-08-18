@@ -4,7 +4,7 @@ import { isPaused } from "../store/db.ts";
 import { roomBySlug } from "../core/rooms.ts";
 import { verifyGuestPassword } from "../core/links.ts";
 import { isShockerAlias, isSlug } from "../core/aliasing.ts";
-import { WindowCounter } from "../core/limits.ts";
+import { Gate, WindowCounter } from "../core/limits.ts";
 import { verifyAltcha } from "../core/altcha.ts";
 import {
   clientIpHash,
@@ -25,6 +25,12 @@ const SESSION_TTL_SECONDS = 2 * 60 * 60;
 
 const viewLimiter = new WindowCounter(60_000, 60);
 const sessionLimiter = new WindowCounter(600_000, config.maxSessionsPerIpPer10Min);
+// Per link as well as per IP: the per-IP key is only as honest as the proxy in
+// front, and a password is worth guessing. Generous enough that a room full of
+// guests typing the password never notices it.
+const passwordLimiter = new WindowCounter(600_000, 60);
+// scrypt runs on the shared thread pool; two at a time, and shed past the queue.
+const passwordGate = new Gate(2, 32);
 
 export const guest = new Hono();
 
@@ -95,10 +101,12 @@ guest.post("/api/s/:slug/session", async (c) => {
   }
 
   if (room.link.guestPasswordHash) {
+    if (!passwordLimiter.check(slug)) return problem(c, 429, "rate_limited", { retryAfter: 600 });
     const password = typeof body["password"] === "string" ? body["password"] : "";
-    if (!verifyGuestPassword(room.link.guestPasswordHash, password)) {
-      return problem(c, 401, "invalid_password");
-    }
+    const stored = room.link.guestPasswordHash;
+    const ok = await passwordGate.run(() => verifyGuestPassword(stored, password));
+    if (ok === null) return problem(c, 503, "busy", { retryAfter: 5 });
+    if (!ok) return problem(c, 401, "invalid_password");
   }
 
   const session = room.createSession();

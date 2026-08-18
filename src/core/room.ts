@@ -57,6 +57,14 @@ export type DispatchResult =
     };
 
 const UPSTREAM_REFRESH_MS = 30_000;
+/**
+ * A stop is never refused and never rate limited: that rule is a safety rule,
+ * not a throughput rule. It does mean a guest can ask for the same stop as fast
+ * as it can send, so an identical stop repeated inside this window is answered
+ * from the one already delivered instead of becoming another upstream call.
+ * Nothing is rejected and the guest still gets ok.
+ */
+const STOP_COALESCE_MS = 250;
 const SESSION_IDLE_MS = 2 * 60 * 60 * 1000;
 const ACTIVITY_RING = 20;
 
@@ -66,6 +74,7 @@ export class LinkRoom {
   sessions = new Map<string, GuestSession>();
   #buckets = new Map<string, TokenBucket>();
   #lastFire = new Map<string, number>();
+  #lastStop = new Map<string, number>();
   #sockets = new Set<LiveSocket>();
   #recent: ActivityFrame[] = [];
   #upstream: UpstreamState = emptyUpstreamState();
@@ -116,17 +125,23 @@ export class LinkRoom {
     return s;
   }
 
+  #dropSession(id: string): void {
+    this.sessions.delete(id);
+    // The bucket outlived the session it belonged to, so the map only ever grew.
+    this.#buckets.delete(`s:${id}`);
+  }
+
   #evictOldestSession(): void {
     let oldest: GuestSession | null = null;
     for (const s of this.sessions.values()) {
       if (!oldest || s.lastSeen < oldest.lastSeen) oldest = s;
     }
-    if (oldest) this.sessions.delete(oldest.id);
+    if (oldest) this.#dropSession(oldest.id);
   }
 
   pruneSessions(now = Date.now()): void {
     for (const [id, s] of this.sessions) {
-      if (now - s.lastSeen > SESSION_IDLE_MS) this.sessions.delete(id);
+      if (now - s.lastSeen > SESSION_IDLE_MS) this.#dropSession(id);
     }
   }
 
@@ -294,8 +309,28 @@ export class LinkRoom {
 
     if (this.#breakerOpen()) return { ok: false, status: 503, type: "upstream_unavailable" };
 
+    // An identical stop that upstream already has is not sent twice.
+    const outgoing = allStop
+      ? resolved.filter((r) => now - (this.#lastStop.get(r.shocker.alias) ?? 0) >= STOP_COALESCE_MS)
+      : resolved;
+    if (allStop) {
+      for (const { shocker } of resolved) this.#lastStop.set(shocker.alias, now);
+      if (outgoing.length === 0) {
+        this.#record(session, resolved, true);
+        return {
+          ok: true,
+          applied: resolved.map((r) => ({
+            alias: r.shocker.alias,
+            intensity: r.cmd.intensity,
+            duration: r.cmd.duration,
+            clamped: r.clamped,
+          })),
+        };
+      }
+    }
+
     try {
-      await this.#send(resolved.map((r) => ({ ...r.cmd, upstreamId: r.shocker.upstreamId })));
+      await this.#send(outgoing.map((r) => ({ ...r.cmd, upstreamId: r.shocker.upstreamId })));
     } catch (err) {
       if (err instanceof UpstreamError) {
         if (err.kind === "unauthorized") {
@@ -466,6 +501,7 @@ export class LinkRoom {
     this.#sockets.clear();
     this.sessions.clear();
     this.#buckets.clear();
+    this.#lastStop.clear();
     this.#recent = [];
     // The token is decrypted only into room memory; drop the reference on eviction.
     if (this.link.upstreamToken) this.link.upstreamToken = undefined;

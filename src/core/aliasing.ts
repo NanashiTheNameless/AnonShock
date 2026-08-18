@@ -1,8 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-// Look-alikes 0, O, I, l, 1 removed so an alias read aloud or retyped is unambiguous.
-const ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-const SLUG_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 /** Rejection sampling: no modulo bias. */
 function pick(alphabet: string, length: number): string {
@@ -27,7 +25,7 @@ export function shockerAlias(): string {
 }
 
 export function newSlug(): string {
-  return pick(SLUG_ALPHABET, 11);
+  return pick(ALPHABET, 11);
 }
 
 export function isDeviceAlias(v: unknown): v is string {

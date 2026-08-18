@@ -2,6 +2,8 @@ import { chmodSync, lstatSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Hono } from "hono";
+import type { Context } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { createAdaptorServer, serve, type ServerType } from "@hono/node-server";
 import { WebSocketServer, type WebSocket } from "ws";
 import { config } from "./config.ts";
@@ -15,13 +17,32 @@ import { create } from "./routes/create.ts";
 import { holder } from "./routes/holder.ts";
 import { manage } from "./routes/manage.ts";
 import { pages } from "./routes/pages.ts";
-import { GUEST_HEADERS, deadLinkPage } from "./routes/http.ts";
+import { GUEST_HEADERS, deadLinkPage, problem } from "./routes/http.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(here, "..", "public");
 
+/**
+ * Nothing here reads a large body. Creation carries a settings document for up
+ * to MAX_SHOCKERS_PER_LINK shockers, which is the only reason anything above a
+ * few kilobytes is allowed. Without this every unauthenticated endpoint would
+ * buffer whatever arrived, and the bot check does not help: the body is parsed
+ * before the challenge is verified.
+ */
+const CREATE_BODY_BYTES = 256 * 1024;
+const DEFAULT_BODY_BYTES = 16 * 1024;
+const CREATE_PATHS = new Set(["/api/links", "/api/links/inspect"]);
+const READINESS_TTL_MS = 10_000;
+
 export function buildApp(): Hono {
   const app = new Hono();
+
+  const tooLarge = (c: Context): Response => problem(c, 413, "payload_too_large");
+  const createLimit = bodyLimit({ maxSize: CREATE_BODY_BYTES, onError: tooLarge });
+  const defaultLimit = bodyLimit({ maxSize: DEFAULT_BODY_BYTES, onError: tooLarge });
+  app.use("*", (c, next) =>
+    (CREATE_PATHS.has(c.req.path) ? createLimit : defaultLimit)(c, next),
+  );
 
   app.use("*", async (c, next) => {
     await next();
@@ -67,10 +88,16 @@ export function buildApp(): Hono {
 
   app.get("/healthz", (c) => c.json({ ok: true }));
 
+  // Cached: every uncached hit is an outbound request, which makes an
+  // unauthenticated probe endpoint into a way to generate upstream traffic.
+  let readiness = { at: 0, reachable: false };
   app.get("/readyz", async (c) => {
     if (isPaused()) return c.json({ ok: false, reason: "paused" }, 503);
-    const reachable = await upstreamReachable();
-    return reachable ? c.json({ ok: true }) : c.json({ ok: false, reason: "upstream" }, 503);
+    const now = Date.now();
+    if (now - readiness.at > READINESS_TTL_MS) {
+      readiness = { at: now, reachable: await upstreamReachable() };
+    }
+    return readiness.reachable ? c.json({ ok: true }) : c.json({ ok: false, reason: "upstream" }, 503);
   });
 
   app.notFound((c) => {
@@ -96,7 +123,9 @@ export function buildApp(): Hono {
 
 /** Live feed: server to client only. Control never travels over this socket. */
 function attachLiveFeed(server: ServerType): WebSocketServer {
-  const wss = new WebSocketServer({ noServer: true });
+  // The 64-character rule below is enforced after ws has buffered the frame, so
+  // the frame itself has to be small: ws would otherwise accept 100 MiB first.
+  const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 });
 
   server.on("upgrade", (req, socket, head) => {
     const url = new URL(req.url ?? "/", "http://localhost");

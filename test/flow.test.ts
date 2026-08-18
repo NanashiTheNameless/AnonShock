@@ -320,7 +320,10 @@ describe("holder", () => {
     assert.ok(links.some((l: any) => l.slug === link.slug));
 
     const id = links.find((l: any) => l.slug === link.slug).id;
-    const issued = await h.fetch(`/api/holder/links/${id}/manage-url`, { cookies: [cookie] });
+    const issued = await h.fetch(`/api/holder/links/${id}/manage-url`, {
+      method: "POST",
+      cookies: [cookie],
+    });
     assert.equal(issued.status, 200);
     assert.match((issued.json as any).manageUrl, /\/m\/[A-Za-z0-9_-]{40,}$/);
   });

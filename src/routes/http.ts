@@ -1,8 +1,10 @@
 import { randomBytes } from "node:crypto";
+import { isIP } from "node:net";
 import type { Context } from "hono";
+import { getConnInfo } from "@hono/node-server/conninfo";
 import { config, OFFICIAL_REPOSITORY } from "../config.ts";
 import { containsUpstreamIdentifier } from "../core/scrub.ts";
-import { hashIp } from "../core/limits.ts";
+import { hashIp, hashIpSlow } from "../core/limits.ts";
 import { logError } from "../log.ts";
 
 export const GUEST_HEADERS: Record<string, string> = {
@@ -51,12 +53,39 @@ export function newNonce(): string {
 }
 
 /**
- * The real client IP arrives from the tunnel as CF-Connecting-IP.
- * X-Forwarded-For is ignored: it is spoofable if anything else reaches the port.
+ * The client identity every limiter is keyed on.
+ *
+ * TRUST_PROXY=cloudflare: the tunnel is the only way in (production forces a
+ * Unix socket, so there is no port to reach around it) and the real address
+ * arrives as CF-Connecting-IP. X-Forwarded-For is still ignored, and the header
+ * must parse as an IP literal: an unparseable one is an attempt to mint limiter
+ * buckets, not a client, so it collapses into the shared unknown bucket.
+ *
+ * TRUST_PROXY=none: no header is believed at all and the peer address is used.
+ * Over a Unix socket there is no peer address, so every caller shares one
+ * bucket. That is the honest answer for a deployment that has not said where
+ * the client address comes from, and it is deliberately uncomfortable.
  */
+function clientIp(c: Context): string {
+  if (config.trustProxy === "cloudflare") {
+    const header = c.req.header("cf-connecting-ip");
+    return header && isIP(header) !== 0 ? header : "unknown";
+  }
+  try {
+    const address = getConnInfo(c).remote.address;
+    return address && isIP(address) !== 0 ? address : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
 export function clientIpHash(c: Context): string {
-  const ip = c.req.header("cf-connecting-ip") ?? (config.trustProxy === "cloudflare" ? "" : "direct");
-  return hashIp(ip || "unknown");
+  return hashIp(clientIp(c));
+}
+
+/** For windows longer than an hour, which the fast key's rotation would void. */
+export function clientIpDayHash(c: Context): string {
+  return hashIpSlow(clientIp(c));
 }
 
 /**
@@ -100,7 +129,12 @@ export function problem(
 export function html(c: Context, markup: string, status = 200): Response {
   // One fresh nonce per response. Pages are no-store, so nothing caches it.
   const nonce = newNonce();
-  return new Response(markup.replaceAll(NONCE_SLOT, nonce), {
+  // Only the first slot, which is the meta tag `page()` writes into the head.
+  // Replacing every occurrence would print the live nonce into any user-chosen
+  // string that happened to contain the placeholder, handing out the one value
+  // the script-src and style-src nonces depend on staying unguessable.
+  const body = markup.replace(NONCE_SLOT, nonce).replaceAll(NONCE_SLOT, "");
+  return new Response(body, {
     status,
     headers: {
       ...GUEST_HEADERS,

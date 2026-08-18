@@ -39,7 +39,7 @@ function expiryText(at) {
 }
 
 async function openManage(id) {
-  const { status, body } = await api(`/api/holder/links/${id}/manage-url`);
+  const { status, body } = await api(`/api/holder/links/${id}/manage-url`, "POST");
   if (status !== 200) {
     await notice("Manage link unavailable", "A manage link could not be issued. Try again in a moment.");
     return;
@@ -57,7 +57,7 @@ async function cancel(id, title) {
   });
   if (!confirmed) return;
   // Cancelling goes through a freshly issued manage token for that one link.
-  const issued = await api(`/api/holder/links/${id}/manage-url`);
+  const issued = await api(`/api/holder/links/${id}/manage-url`, "POST");
   if (issued.status !== 200) {
     await notice("Link not cancelled", "A manage link could not be issued. Nothing was deleted.");
     return;
