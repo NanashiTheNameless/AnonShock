@@ -156,3 +156,14 @@ test/                  mock upstream, flow, host, and anonymity suites
 
 Implemented and tested: share-link and API-token creation, guest controls, holder and management
 surfaces, recovery, host CLI controls, Docker deployment, and CI publishing to GHCR.
+
+## Support My Work
+
+If this project is useful to you, you can support it here:
+
+- [<https://github.com/sponsors/NanashiTheNameless>](<https://github.com/sponsors/NanashiTheNameless>)
+- [<https://buymeacoffee.com/NamelessNanashi>](<https://buymeacoffee.com/NamelessNanashi>)
+- [<https://ko-fi.com/NanashiTheNameless>](<https://ko-fi.com/NanashiTheNameless>)
+- [<https://liberapay.com/NamelessNanashi>](<https://liberapay.com/NamelessNanashi>)
+- [<https://thanks.dev/u/gh/NanashiTheNameless>](<https://thanks.dev/u/gh/NanashiTheNameless>)
+- [<https://throne.com/NamelessNanashi>](<https://throne.com/NamelessNanashi>)
