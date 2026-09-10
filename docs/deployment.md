@@ -9,7 +9,7 @@ The domain must already be active in Cloudflare DNS.
 3. Copy the tunnel token from the Docker installation command. The token is the long value after
    `--token`; store only that value as `TUNNEL_TOKEN` in `.env`.
 4. Open the tunnel's **Routes** tab and select **Add route → Published application**.
-5. Set the subdomain to `anonshock`, select `namelessnanashi.dev`, and leave the path empty.
+5. Set the subdomain to `anonshock`, select your chosen domain, and leave the path empty.
 6. Enter the complete protocol and socket path in the **Service URL** field:
 
    ```text
