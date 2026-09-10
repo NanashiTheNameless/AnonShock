@@ -94,7 +94,7 @@ printf 'TOKEN_PEPPER=%s\n'    "$(openssl rand -base64 32)" >> .env
 printf 'ALTCHA_HMAC_KEY=%s\n' "$(openssl rand -base64 32)" >> .env   # omit to disable the bot check
 chmod 600 .env
 # Cloudflare Zero Trust -> Networks -> Tunnels -> create one, put its token in .env,
-# and route anonshock.namelessnanashi.dev -> unix:/run/anonshock/anonshock.sock
+# and route anonshock.example.invalid -> unix:/run/anonshock/anonshock.sock
 docker compose up -d
 ```
 
